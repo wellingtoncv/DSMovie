@@ -31,6 +31,10 @@ public class ScoreDTO {
 		this.score = Double.valueOf(df.format(score.getValue()));
 	}
 	
+	public ScoreDTO() {
+		//Constructor...
+	}
+	
 	public Long getMovieId() {
 		return movieId;
 	}
