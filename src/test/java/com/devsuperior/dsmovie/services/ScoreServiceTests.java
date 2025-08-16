@@ -13,9 +13,16 @@ public class ScoreServiceTests {
 	
 	@Test
 	public void saveScoreShouldReturnMovieDTO() {
+		
+		
+		
 	}
 	
 	@Test
 	public void saveScoreShouldThrowResourceNotFoundExceptionWhenNonExistingMovieId() {
+		
+		
+		
+		
 	}
 }
