@@ -1,14 +1,14 @@
 package com.devsuperior.dsmovie.services;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,7 +29,7 @@ import com.devsuperior.dsmovie.tests.ScoreFactory;
 public class ScoreServiceTests {
 
 	@InjectMocks
-	private ScoreService scoreService;
+	private ScoreService service;
 
 	@Mock
 	private MovieRepository movieRepository;
@@ -40,46 +40,57 @@ public class ScoreServiceTests {
 	@Mock
 	private UserService userService;
 
+	private ScoreDTO scoreDTO;
+	private MovieEntity movie;
+	private UserEntity user;
+
+	@BeforeEach
+	void setUp() {
+		// Cria uma entidade de Score via factory. Ela já adiciona o score no
+		// movie.getScores()
+		ScoreEntity scoreEntity = ScoreFactory.createScoreEntity();
+
+		// Pega movie e user da CHAVE COMPOSTA (ScorePK)
+		movie = scoreEntity.getId().getMovie();
+		user = scoreEntity.getId().getUser();
+
+		// Cria um DTO válido
+		scoreDTO = ScoreFactory.createScoreDTO();
+	}
+
 	@Test
 	public void saveScoreShouldReturnMovieDTO() {
-		// Arrange
-		ScoreDTO dto = ScoreFactory.createScoreDTO();
-		MovieEntity movie = new MovieEntity();
-		movie.setId(dto.getMovieId());
-		movie.setScore(0.0);
-		movie.setCount(0);
-
-		UserEntity user = new UserEntity();
-		ScoreEntity score = new ScoreEntity();
-		score.setMovie(movie);
-		score.setUser(user);
-		score.setValue(dto.getScore());
-
+		// Mocks necessários
+		when(movieRepository.findById(scoreDTO.getMovieId())).thenReturn(Optional.of(movie));
 		when(userService.authenticated()).thenReturn(user);
-		when(movieRepository.findById(dto.getMovieId())).thenReturn(Optional.of(movie));
-		when(scoreRepository.saveAndFlush(any())).thenReturn(score);
-		when(movieRepository.save(any())).thenReturn(movie);
 
-		// Act
-		MovieDTO result = scoreService.saveScore(dto);
+		// Devolve a própria entidade passada no saveAndFlush
+		when(scoreRepository.saveAndFlush(any(ScoreEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-		// Assert
-		assertNotNull(result);
-		assertEquals(dto.getMovieId(), result.getId());
-		verify(scoreRepository).saveAndFlush(any());
-		verify(movieRepository).save(any());
+		// Devolve o próprio filme no save (o service salva antes de retornar o DTO)
+		when(movieRepository.save(any(MovieEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
+		// Executa
+		MovieDTO result = service.saveScore(scoreDTO);
+
+		// Verificações
+		Assertions.assertNotNull(result);
+		Assertions.assertEquals(movie.getId(), result.getId());
+
+		// Garante que as dependências foram chamadas
+		verify(movieRepository).findById(scoreDTO.getMovieId());
+		verify(scoreRepository).saveAndFlush(any(ScoreEntity.class));
+		verify(movieRepository).save(any(MovieEntity.class));
 	}
 
 	@Test
 	public void saveScoreShouldThrowResourceNotFoundExceptionWhenNonExistingMovieId() {
+		// findById retorna vazio
+		when(movieRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-		ScoreDTO dto = ScoreFactory.createScoreDTO();
-		when(movieRepository.findById(dto.getMovieId())).thenReturn(Optional.empty());
-
-		assertThrows(ResourceNotFoundException.class, () -> {
-			scoreService.saveScore(dto);
+		// Executa + Verifica exceção
+		Assertions.assertThrows(ResourceNotFoundException.class, () -> {
+			service.saveScore(scoreDTO);
 		});
-
 	}
 }

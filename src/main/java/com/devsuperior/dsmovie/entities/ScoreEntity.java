@@ -60,4 +60,14 @@ public class ScoreEntity {
 		ScoreEntity other = (ScoreEntity) obj;
 		return Objects.equals(id, other.id);
 	}
+
+	public MovieEntity getMovie() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public UserEntity getUser() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
